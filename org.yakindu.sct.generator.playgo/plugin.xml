@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.yakindu.sct.generator.core.generator">
+       <SCTGenerator
+            class="org.yakindu.sct.generator.playgo.PlaygoCodeGenerator"
+            description="Code Generator for Playgo"
+            contentType="statechart"
+            elementRefType="org.yakindu.sct.model.sgraph.Statechart"
+            icon="icons/icon.png"
+            id="yakindu::playgo"
+            name="YAKINDU SCT Playgo Code Generator">
+          <FeatureLibrary
+                library_id="org.yakindu.generator.core.features">
+          </FeatureLibrary>
+          <FeatureLibrary
+                library_id="org.yakindu.generator.core.features.sctbase">
+          </FeatureLibrary>
+          <FeatureLibrary
+                library_id="org.yakindu.sct.generator.feature.java">
+          </FeatureLibrary>
+      </SCTGenerator>
+   </extension>
+   <extension
+         point="org.yakindu.sct.generator.core.featuretypes">
+      <FeatureLibrary
+            defaultProvider="org.yakindu.sct.generator.java.features.JavaFeatureValueProvider"
+            library_id="org.yakindu.sct.generator.feature.java"
+            uri="platform:/plugin/org.yakindu.sct.generator.java/library/FeatureTypeLibrary.xmi">
+      </FeatureLibrary>
+   </extension>
+   <extension
+         point="org.yakindu.sct.generator.core.extensions">
+      <ExtensionGeneratorMapping
+            fileExtension="sct"
+            generatorId="yakindu::playgo">
+      </ExtensionGeneratorMapping>
+   </extension>
+</plugin>
