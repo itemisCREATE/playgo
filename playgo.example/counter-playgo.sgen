@@ -1,0 +1,20 @@
+GeneratorModel for yakindu::playgo {
+
+	statechart counter {
+
+		feature Outlet {
+			targetProject = "playgo.example"
+			targetFolder = "src-gen"
+		}
+		
+		feature RunnableWrapper {
+			namePrefix =  "Runnable" 
+			nameSuffix =  "" 
+		}
+		
+		feature GeneralFeatures {
+			TimerService = true
+		}
+		
+	}
+}
