@@ -7,6 +7,7 @@ Bundle-Activator: org.yakindu.sct.generator.playgo.Activator
 Require-Bundle: org.eclipse.core.runtime,
  org.yakindu.sct.generator.java;bundle-version="2.4.1",
  org.yakindu.sct.model.sgraph;bundle-version="2.4.1",
- org.yakindu.sct.generator.genmodel;bundle-version="2.4.1"
+ org.yakindu.sct.generator.genmodel;bundle-version="2.4.1",
+ org.yakindu.sct.model.stext;bundle-version="1.0.0"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
