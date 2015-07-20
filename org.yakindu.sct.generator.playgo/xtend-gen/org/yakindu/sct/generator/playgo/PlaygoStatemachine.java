@@ -30,16 +30,28 @@ public class PlaygoStatemachine extends Statemachine {
     _builder.append("public class ");
     String _statemachineClassName = this._naming.statemachineClassName(flow);
     _builder.append(_statemachineClassName, "");
-    _builder.append(" extends ExecutionBridge implements ");
+    _builder.append(" implements ");
     String _statemachineInterfaceName = this._naming.statemachineInterfaceName(flow);
     _builder.append(_statemachineInterfaceName, "");
-    _builder.append(" {");
+    _builder.append(", IExecutionEngineSCT {");
     _builder.newLineIfNotEmpty();
+    _builder.append("\t");
+    _builder.newLine();
     _builder.append("\t");
     CharSequence _createFieldDeclarations = this.createFieldDeclarations(flow, entry);
     _builder.append(_createFieldDeclarations, "\t");
     _builder.newLineIfNotEmpty();
     _builder.newLine();
+    _builder.append("\t");
+    CharSequence _createPlayGoFieldDeclarations = this.createPlayGoFieldDeclarations(flow);
+    _builder.append(_createPlayGoFieldDeclarations, "\t");
+    _builder.newLineIfNotEmpty();
+    _builder.append("\t");
+    _builder.newLine();
+    _builder.append("\t");
+    CharSequence _createToString = this.createToString(flow);
+    _builder.append(_createToString, "\t");
+    _builder.newLineIfNotEmpty();
     _builder.append("\t\t");
     _builder.newLine();
     _builder.append("\t");
@@ -121,16 +133,79 @@ public class PlaygoStatemachine extends Statemachine {
     _builder.append("\t");
     _builder.newLine();
     _builder.append("\t");
-    CharSequence _initialize = this.initialize(flow);
-    _builder.append(_initialize, "\t");
-    _builder.newLineIfNotEmpty();
-    _builder.append("\t");
-    _builder.newLine();
-    _builder.append("\t");
     CharSequence _isFinal = this.isFinal(flow);
     _builder.append(_isFinal, "\t");
     _builder.newLineIfNotEmpty();
     _builder.append("\t");
+    _builder.newLine();
+    _builder.append("\t");
+    CharSequence _setExecutionBridge = this.setExecutionBridge(flow);
+    _builder.append(_setExecutionBridge, "\t");
+    _builder.newLineIfNotEmpty();
+    _builder.append("\t");
+    _builder.newLine();
+    _builder.append("\t");
+    CharSequence _initEE = this.initEE(flow);
+    _builder.append(_initEE, "\t");
+    _builder.newLineIfNotEmpty();
+    _builder.append("\t");
+    _builder.newLine();
+    _builder.append("\t");
+    CharSequence _activateMethod = this.activateMethod(flow);
+    _builder.append(_activateMethod, "\t");
+    _builder.newLineIfNotEmpty();
+    _builder.append("\t");
+    _builder.newLine();
+    _builder.append("\t");
+    CharSequence _setPropertyValue = this.setPropertyValue(flow);
+    _builder.append(_setPropertyValue, "\t");
+    _builder.newLineIfNotEmpty();
+    _builder.append("\t");
+    _builder.newLine();
+    _builder.append("\t");
+    CharSequence _systemEvent = this.systemEvent(flow);
+    _builder.append(_systemEvent, "\t");
+    _builder.newLineIfNotEmpty();
+    _builder.append("\t");
+    _builder.newLine();
+    _builder.append("}");
+    _builder.newLine();
+    return _builder;
+  }
+  
+  @Override
+  protected CharSequence createConstructor(final ExecutionFlow flow) {
+    CharSequence _createConstructor = super.createConstructor(flow);
+    StringConcatenation _builder = new StringConcatenation();
+    _builder.newLine();
+    _builder.append("public ");
+    String _statemachineClassName = this._naming.statemachineClassName(flow);
+    _builder.append(_statemachineClassName, "");
+    _builder.append("(String selfObjName, String selfClassName) {");
+    _builder.newLineIfNotEmpty();
+    _builder.append("\t");
+    _builder.append("this();");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("this.selfObjectName = selfObjName;");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("this.selfClassName = selfClassName;");
+    _builder.newLine();
+    _builder.append("}");
+    _builder.newLine();
+    _builder.newLine();
+    return (_createConstructor + _builder.toString());
+  }
+  
+  public CharSequence createToString(final ExecutionFlow flow) {
+    StringConcatenation _builder = new StringConcatenation();
+    _builder.append("public String toString(){");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("return this.getClass().getSimpleName() + \"[\" + this.selfObjectName+\":\" +this.selfClassName + \"]\";");
     _builder.newLine();
     _builder.append("}");
     _builder.newLine();
@@ -141,18 +216,42 @@ public class PlaygoStatemachine extends Statemachine {
   protected CharSequence createImports(final ExecutionFlow flow, final GeneratorEntry entry) {
     CharSequence _createImports = super.createImports(flow, entry);
     StringConcatenation _builder = new StringConcatenation();
-    _builder.append("import il.ac.wis.cs.playgo.playtoolkit.ebridge.ExecutionBridge;");
+    _builder.append("import il.ac.wis.cs.playgo.ee.sct.IExecutionEngineSCT;");
+    _builder.newLine();
+    _builder.append("\t\t");
+    _builder.append("import il.ac.wis.cs.playgo.playtoolkit.ebridge.IExecutionBridge;");
+    _builder.newLine();
+    _builder.append("\t\t");
+    _builder.append("import il.ac.wis.cs.playgo.ee.sct.ExecutionBridge2SCT;");
+    _builder.newLine();
+    _builder.append("\t\t");
+    _builder.append("import org.yakindu.scr.TimerService;");
+    _builder.newLine();
     return (_createImports + _builder.toString());
   }
   
-  protected CharSequence initialize(final ExecutionFlow flow) {
+  protected CharSequence createPlayGoFieldDeclarations(final ExecutionFlow flow) {
     StringConcatenation _builder = new StringConcatenation();
-    _builder.append("@Override");
+    _builder.append("private ExecutionBridge2SCT ebridge = null;");
     _builder.newLine();
-    _builder.append("public void initialize() {");
+    _builder.newLine();
+    _builder.append("private String selfObjectName = null;");
+    _builder.newLine();
+    _builder.append("private String selfClassName = null;");
+    _builder.newLine();
+    _builder.newLine();
+    _builder.append("public String getSelfObjectName(){");
     _builder.newLine();
     _builder.append("\t");
-    _builder.append("// TODO Auto-generated method stub\t");
+    _builder.append("return selfObjectName;");
+    _builder.newLine();
+    _builder.append("}");
+    _builder.newLine();
+    _builder.newLine();
+    _builder.append("public String getSelfClassName(){");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("return selfClassName;");
     _builder.newLine();
     _builder.append("}");
     _builder.newLine();
@@ -166,10 +265,106 @@ public class PlaygoStatemachine extends Statemachine {
     _builder.append("public boolean isFinal() {");
     _builder.newLine();
     _builder.append("\t");
-    _builder.append("// TODO Auto-generated method stub\t");
+    _builder.append("return false;");
+    _builder.newLine();
+    _builder.append("}");
+    _builder.newLine();
+    _builder.newLine();
+    return _builder;
+  }
+  
+  protected CharSequence setExecutionBridge(final ExecutionFlow flow) {
+    StringConcatenation _builder = new StringConcatenation();
+    _builder.append("public void setExecutionBridge(IExecutionBridge eb) {");
     _builder.newLine();
     _builder.append("\t");
-    _builder.append("return false;");
+    _builder.append("this.ebridge = (ExecutionBridge2SCT) eb;");
+    _builder.newLine();
+    _builder.append("}");
+    _builder.newLine();
+    return _builder;
+  }
+  
+  protected CharSequence initEE(final ExecutionFlow flow) {
+    StringConcatenation _builder = new StringConcatenation();
+    _builder.append("public void initEE() {");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("this.setTimer(new TimerService());");
+    _builder.newLine();
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("// enter the sm and active the Idle state");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("this.init();");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("this.enter();");
+    _builder.newLine();
+    _builder.append("}");
+    _builder.newLine();
+    return _builder;
+  }
+  
+  protected CharSequence activateMethod(final ExecutionFlow flow) {
+    StringConcatenation _builder = new StringConcatenation();
+    _builder.append("public void activateMethod(String className, String objectName,");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("String methodName, String... arguments) {");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("ebridge.activateMethod(className, objectName, methodName, arguments);");
+    _builder.newLine();
+    _builder.append("}");
+    _builder.newLine();
+    return _builder;
+  }
+  
+  protected CharSequence setPropertyValue(final ExecutionFlow flow) {
+    StringConcatenation _builder = new StringConcatenation();
+    _builder.append("public void setPropertyValue(String className, String objectName,");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("String propertyName, String value) {");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("ebridge.setPropertyValue(className, objectName, propertyName, value);");
+    _builder.newLine();
+    _builder.append("}");
+    _builder.newLine();
+    return _builder;
+  }
+  
+  protected CharSequence systemEvent(final ExecutionFlow flow) {
+    StringConcatenation _builder = new StringConcatenation();
+    _builder.append("public void systemEvent(String targetClassName, String targetObjectName, String eventName) {");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("if(ebridge.isOriginatedFromExecutionEngine()) {");
+    _builder.newLine();
+    _builder.append("\t\t\t");
+    _builder.append("if(targetClassName.equalsIgnoreCase(\"self\")){");
+    _builder.newLine();
+    _builder.append("\t\t\t\t");
+    _builder.append("ebridge.systemEvent(selfClassName, selfObjectName, eventName);");
+    _builder.newLine();
+    _builder.append("\t\t\t");
+    _builder.append("} else {");
+    _builder.newLine();
+    _builder.append("\t\t\t\t");
+    _builder.append("ebridge.systemEventSelfExcluded(selfClassName, selfObjectName, targetClassName, eventName);");
+    _builder.newLine();
+    _builder.append("\t\t\t");
+    _builder.append("}");
+    _builder.newLine();
+    _builder.append("\t\t");
+    _builder.append("}");
+    _builder.newLine();
+    _builder.append("\t\t");
     _builder.newLine();
     _builder.append("}");
     _builder.newLine();
@@ -221,11 +416,14 @@ public class PlaygoStatemachine extends Statemachine {
           _builder.append("\t");
           _builder.append("systemEvent(\"");
           _builder.append(className, "\t");
-          _builder.append("\", \"");
+          _builder.append("\", selfObjectName, \"");
           String _name_1 = event.getName();
           _builder.append(_name_1, "\t");
           _builder.append("\");");
           _builder.newLineIfNotEmpty();
+          _builder.append("\t");
+          _builder.append("}");
+          _builder.newLine();
           _builder.append("}");
           _builder.newLine();
           _builder.newLine();
@@ -267,7 +465,7 @@ public class PlaygoStatemachine extends Statemachine {
           _builder.append("\t");
           _builder.append("systemEvent(\"");
           _builder.append(className, "\t");
-          _builder.append("\", \"");
+          _builder.append("\", selfObjectName, \"");
           String _name_4 = event.getName();
           _builder.append(_name_4, "\t");
           _builder.append("\");");
