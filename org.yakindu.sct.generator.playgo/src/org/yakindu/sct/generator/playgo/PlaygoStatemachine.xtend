@@ -5,6 +5,7 @@ import org.yakindu.sct.generator.java.Statemachine
 import org.yakindu.sct.model.sexec.ExecutionFlow
 import org.yakindu.sct.model.sgen.GeneratorEntry
 import org.yakindu.sct.model.stext.stext.EventDefinition
+import org.yakindu.sct.model.stext.stext.VariableDefinition
 
 class PlaygoStatemachine extends Statemachine {
 
@@ -136,7 +137,7 @@ class PlaygoStatemachine extends Statemachine {
 			this.setTimer(new TimerService());
 
 			// enter the sm and active the Idle state
-	
+		
 			this.init();
 			this.enter();
 		}
@@ -152,7 +153,7 @@ class PlaygoStatemachine extends Statemachine {
 	def protected setPropertyValue(ExecutionFlow flow) '''
 		public void setPropertyValue(String className, String objectName,
 			String propertyName, String value) {
-			ebridge.setPropertyValue(className, objectName, propertyName, value);
+			// ToDo: add implementation to call setter
 		}
 	'''
 	
@@ -194,6 +195,22 @@ class PlaygoStatemachine extends Statemachine {
 		«ENDIF»
 	'''
 	}
+		
+	override protected def generateVariableDefinition(VariableDefinition variable) '''
+		«IF !variable.const»
+			«variable.writeableFieldDeclaration»
+		«ENDIF»
+		public «variable.type.targetLanguageName» «variable.getter» {
+			return «variable.symbol»;
+		}
+		
+		«IF !variable.readonly && !variable.const»
+			public void «variable.setter»(«variable.type.targetLanguageName» value) {
+				this.«variable.symbol» = value;
+				ebridge.objectPropertyChanged(selfClassName, selfObjectName, "«variable.name»", "«variable.type.targetLanguageName»", String.valueOf(value));
+			}
+		«ENDIF»
+	'''
 	
 	
 }

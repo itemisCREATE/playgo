@@ -9,6 +9,7 @@ import org.yakindu.sct.model.sexec.ExecutionFlow;
 import org.yakindu.sct.model.sgen.GeneratorEntry;
 import org.yakindu.sct.model.stext.stext.EventDefinition;
 import org.yakindu.sct.model.stext.stext.InterfaceScope;
+import org.yakindu.sct.model.stext.stext.VariableDefinition;
 
 @SuppressWarnings("all")
 public class PlaygoStatemachine extends Statemachine {
@@ -296,7 +297,6 @@ public class PlaygoStatemachine extends Statemachine {
     _builder.append("\t");
     _builder.append("// enter the sm and active the Idle state");
     _builder.newLine();
-    _builder.append("\t");
     _builder.newLine();
     _builder.append("\t");
     _builder.append("this.init();");
@@ -332,7 +332,7 @@ public class PlaygoStatemachine extends Statemachine {
     _builder.append("String propertyName, String value) {");
     _builder.newLine();
     _builder.append("\t");
-    _builder.append("ebridge.setPropertyValue(className, objectName, propertyName, value);");
+    _builder.append("// ToDo: add implementation to call setter");
     _builder.newLine();
     _builder.append("}");
     _builder.newLine();
@@ -478,5 +478,79 @@ public class PlaygoStatemachine extends Statemachine {
       _xblockexpression = _builder;
     }
     return _xblockexpression;
+  }
+  
+  @Override
+  protected CharSequence generateVariableDefinition(final VariableDefinition variable) {
+    StringConcatenation _builder = new StringConcatenation();
+    {
+      boolean _isConst = variable.isConst();
+      boolean _not = (!_isConst);
+      if (_not) {
+        CharSequence _writeableFieldDeclaration = this.writeableFieldDeclaration(variable);
+        _builder.append(_writeableFieldDeclaration, "");
+        _builder.newLineIfNotEmpty();
+      }
+    }
+    _builder.append("public ");
+    Type _type = variable.getType();
+    String _targetLanguageName = this._iCodegenTypeSystemAccess.getTargetLanguageName(_type);
+    _builder.append(_targetLanguageName, "");
+    _builder.append(" ");
+    String _ter = this._naming.getter(variable);
+    _builder.append(_ter, "");
+    _builder.append(" {");
+    _builder.newLineIfNotEmpty();
+    _builder.append("\t");
+    _builder.append("return ");
+    String _symbol = this._naming.getSymbol(variable);
+    _builder.append(_symbol, "\t");
+    _builder.append(";");
+    _builder.newLineIfNotEmpty();
+    _builder.append("}");
+    _builder.newLine();
+    _builder.newLine();
+    {
+      boolean _and = false;
+      boolean _isReadonly = variable.isReadonly();
+      boolean _not_1 = (!_isReadonly);
+      if (!_not_1) {
+        _and = false;
+      } else {
+        boolean _isConst_1 = variable.isConst();
+        boolean _not_2 = (!_isConst_1);
+        _and = _not_2;
+      }
+      if (_and) {
+        _builder.append("public void ");
+        String _setter = this._naming.setter(variable);
+        _builder.append(_setter, "");
+        _builder.append("(");
+        Type _type_1 = variable.getType();
+        String _targetLanguageName_1 = this._iCodegenTypeSystemAccess.getTargetLanguageName(_type_1);
+        _builder.append(_targetLanguageName_1, "");
+        _builder.append(" value) {");
+        _builder.newLineIfNotEmpty();
+        _builder.append("\t");
+        _builder.append("this.");
+        String _symbol_1 = this._naming.getSymbol(variable);
+        _builder.append(_symbol_1, "\t");
+        _builder.append(" = value;");
+        _builder.newLineIfNotEmpty();
+        _builder.append("\t");
+        _builder.append("ebridge.objectPropertyChanged(selfClassName, selfObjectName, \"");
+        String _name = variable.getName();
+        _builder.append(_name, "\t");
+        _builder.append("\", \"");
+        Type _type_2 = variable.getType();
+        String _targetLanguageName_2 = this._iCodegenTypeSystemAccess.getTargetLanguageName(_type_2);
+        _builder.append(_targetLanguageName_2, "\t");
+        _builder.append("\", String.valueOf(value));");
+        _builder.newLineIfNotEmpty();
+        _builder.append("}");
+        _builder.newLine();
+      }
+    }
+    return _builder;
   }
 }
