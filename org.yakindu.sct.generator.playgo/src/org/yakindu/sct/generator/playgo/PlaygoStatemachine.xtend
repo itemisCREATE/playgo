@@ -6,6 +6,7 @@ import org.yakindu.sct.model.sexec.ExecutionFlow
 import org.yakindu.sct.model.sgen.GeneratorEntry
 import org.yakindu.sct.model.stext.stext.EventDefinition
 import org.yakindu.sct.model.stext.stext.VariableDefinition
+import org.yakindu.sct.model.stext.stext.InterfaceScope
 
 class PlaygoStatemachine extends Statemachine {
 
@@ -159,14 +160,11 @@ class PlaygoStatemachine extends Statemachine {
 	
 	def protected systemEvent(ExecutionFlow flow) '''
 		public void systemEvent(String targetClassName, String targetObjectName, String eventName) {
-			if(ebridge.isOriginatedFromExecutionEngine()) {
-					if(targetClassName.equalsIgnoreCase("self")){
-						ebridge.systemEvent(selfClassName, selfObjectName, eventName);
-					} else {
-						ebridge.systemEventSelfExcluded(selfClassName, selfObjectName, targetClassName, eventName);
-					}
-				}
-				
+			if(targetClassName.equalsIgnoreCase("self")){
+				ebridge.systemEvent(this.getClass().getSimpleName(), selfClassName, selfObjectName, eventName);
+			} else {
+				ebridge.systemEventSelfExcluded(this.getClass().getSimpleName(), selfClassName, selfObjectName, targetClassName, eventName);
+			}
 		}
 	'''
 	
@@ -177,9 +175,17 @@ class PlaygoStatemachine extends Statemachine {
 			public void raise«event.name.asName»(«event.type.targetLanguageName» value) {
 				«event.symbol» = true;
 				«event.valueIdentifier» = value;
-				systemEvent("«className»", selfObjectName, "«event.name»");
-				}
+				systemEvent("«className»", selfObjectName, "raise«event.name.asName»");
+				System.out.println("in " + "«className»." +"raise«event.name.asName»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
+			
+			public void «event.name.asIdentifier»(«event.type.targetLanguageName» value) {
+				«event.symbol» = true;
+				«event.valueIdentifier» = value;
+				
+				System.out.println("in " + "«className»." + «event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
+			}
+		}
 			
 			private «event.type.targetLanguageName» get«event.name.asName»Value() {
 				«event.getIllegalAccessValidation()»
@@ -190,12 +196,79 @@ class PlaygoStatemachine extends Statemachine {
 			public void raise«event.name.asName»() {
 				«event.symbol» = true;
 				systemEvent("«className»", selfObjectName, "«event.name»");
+				System.out.println("in " + "«className»." +"raise«event.name.asName»" + "[" + selfObjectName+ ":" + selfClassName + "]");
+			}
+			
+			public void «event.name.asIdentifier»() {
+				«event.symbol» = true;
+				System.out.println("in " + "«className»." +"«event.name.asIdentifier»"+ "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 			
 		«ENDIF»
 	'''
 	}
 		
+		
+	override protected def generateOutEventDefinition(EventDefinition event, GeneratorEntry entry, InterfaceScope scope) {
+		val className = event.scope.interfaceName.substring(3);
+		'''
+		public boolean isRaised«event.name.asName»() {
+			return «event.symbol»;
+		}
+		
+		«IF event.type != null && !isSame(event.type, getType(GenericTypeSystem.VOID))»
+			private void raise«event.name.asName»(«event.type.targetLanguageName» value) {
+				«event.symbol» = true;
+				«event.valueIdentifier» = value;
+				«IF entry.createInterfaceObserver»
+				for («scope.interfaceListenerName» listener : listeners) {
+					listener.on«event.name.asEscapedName»Raised(value);
+				}
+				systemEvent("«className»", selfObjectName, "«event.name»");
+				System.out.println("in " + "«className»." +"raise«event.name.asName»" + "[" + selfObjectName+ ":" + selfClassName + "]");
+				«ENDIF»
+			}
+			
+			private void «event.name.asIdentifier»(«event.type.targetLanguageName» value) {
+				«event.symbol» = true;
+				«event.valueIdentifier» = value;
+				«IF entry.createInterfaceObserver»
+				for («scope.interfaceListenerName» listener : listeners) {
+					listener.on«event.name.asEscapedName»Raised(value);
+				}
+				«ENDIF»
+				System.out.println("in " + "«className»." +"«event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
+			}
+			
+			public «event.type.targetLanguageName» get«event.name.asName»Value() {
+				«event.getIllegalAccessValidation()»
+				return «event.valueIdentifier»;
+			}
+		«ELSE»
+			private void raise«event.name.asName»() {
+				«event.symbol» = true;
+				«IF entry.createInterfaceObserver»
+					for («scope.interfaceListenerName» listener : listeners) {
+						listener.on«event.name.asEscapedName»Raised();
+					}
+				«ENDIF»
+				systemEvent("«className»", selfObjectName, "«event.name»");
+				System.out.println("in " + "«className»." +"raise«event.name.asName»" + "[" + selfObjectName+ ":" + selfClassName + "]");
+			}
+			
+			private void «event.name.asIdentifier»() {
+				«event.symbol» = true;
+				«IF entry.createInterfaceObserver»
+					for («scope.interfaceListenerName» listener : listeners) {
+						listener.on«event.name.asEscapedName»Raised();
+					}
+				«ENDIF»
+				System.out.println("in " + "«className»." +"«event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
+			}
+		«ENDIF»
+	'''
+	}
+	
 	override protected def generateVariableDefinition(VariableDefinition variable) '''
 		«IF !variable.const»
 			«variable.writeableFieldDeclaration»
