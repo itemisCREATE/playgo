@@ -61,6 +61,8 @@ class PlaygoStatemachine extends Statemachine {
 			
 			«flow.systemEvent»
 			
+			«flow.trace»
+			
 		}
 	'''
 
@@ -167,6 +169,10 @@ class PlaygoStatemachine extends Statemachine {
 			}
 		}
 	'''
+	def protected trace(ExecutionFlow flow) '''
+		public void trace(String eventName) {
+		}
+	'''
 	
 	override protected def generateInEventDefinition(EventDefinition event){
 		val className = event.scope.interfaceName.substring(3);
@@ -176,14 +182,13 @@ class PlaygoStatemachine extends Statemachine {
 				«event.symbol» = true;
 				«event.valueIdentifier» = value;
 				systemEvent("«className»", selfObjectName, "«event.name»");
-				System.out.println("in " + "«className»." +"raise«event.name.asName»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 			
 			public void «event.name.asIdentifier»(«event.type.targetLanguageName» value) {
 				«event.symbol» = true;
 				«event.valueIdentifier» = value;
-				
-				System.out.println("in " + "«className»." + «event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
+				trace("«event.name»");
+				// System.out.println("in " + "«className»." + «event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 		}
 			
@@ -196,12 +201,12 @@ class PlaygoStatemachine extends Statemachine {
 			public void raise«event.name.asName»() {
 				«event.symbol» = true;
 				systemEvent("«className»", selfObjectName, "«event.name»");
-				System.out.println("in " + "«className»." +"raise«event.name.asName»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 			
 			public void «event.name.asIdentifier»() {
 				«event.symbol» = true;
-				System.out.println("in " + "«className»." +"«event.name.asIdentifier»"+ "[" + selfObjectName+ ":" + selfClassName + "]");
+				trace("«event.name»");
+				//System.out.println("in " + "«className»." +"«event.name.asIdentifier»"+ "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 			
 		«ENDIF»
@@ -225,7 +230,6 @@ class PlaygoStatemachine extends Statemachine {
 					listener.on«event.name.asEscapedName»Raised(value);
 				}
 				systemEvent("«className»", selfObjectName, "«event.name»");
-				System.out.println("in " + "«className»." +"raise«event.name.asName»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 				«ENDIF»
 			}
 			
@@ -237,7 +241,8 @@ class PlaygoStatemachine extends Statemachine {
 					listener.on«event.name.asEscapedName»Raised(value);
 				}
 				«ENDIF»
-				System.out.println("in " + "«className»." +"«event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
+				trace("«event.name»");
+				//System.out.println("in " + "«className»." +"«event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 			
 			public «event.type.targetLanguageName» get«event.name.asName»Value() {
@@ -253,7 +258,6 @@ class PlaygoStatemachine extends Statemachine {
 					}
 				«ENDIF»
 				systemEvent("«className»", selfObjectName, "«event.name»");
-				System.out.println("in " + "«className»." +"raise«event.name.asName»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 			
 			private void «event.name.asIdentifier»() {
@@ -263,7 +267,8 @@ class PlaygoStatemachine extends Statemachine {
 						listener.on«event.name.asEscapedName»Raised();
 					}
 				«ENDIF»
-				System.out.println("in " + "«className»." +"«event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
+				trace("«event.name»");
+				//System.out.println("in " + "«className»." +"«event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 		«ENDIF»
 	'''
