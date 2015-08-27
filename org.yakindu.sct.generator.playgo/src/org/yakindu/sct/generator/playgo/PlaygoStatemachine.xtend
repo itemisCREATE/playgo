@@ -175,7 +175,7 @@ class PlaygoStatemachine extends Statemachine {
 			public void raise«event.name.asName»(«event.type.targetLanguageName» value) {
 				«event.symbol» = true;
 				«event.valueIdentifier» = value;
-				systemEvent("«className»", selfObjectName, "raise«event.name.asName»");
+				systemEvent("«className»", selfObjectName, "«event.name»");
 				System.out.println("in " + "«className»." +"raise«event.name.asName»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 			
