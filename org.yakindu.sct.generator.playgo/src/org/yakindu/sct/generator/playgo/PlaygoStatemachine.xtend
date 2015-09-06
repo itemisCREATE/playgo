@@ -163,9 +163,9 @@ class PlaygoStatemachine extends Statemachine {
 	def protected systemEvent(ExecutionFlow flow) '''
 		public void systemEvent(String targetClassName, String targetObjectName, String eventName) {
 			if(targetClassName.equalsIgnoreCase("self")){
-				ebridge.systemEvent(this.getClass().getSimpleName(), selfClassName, selfObjectName, eventName);
+				ebridge.systemEvent(this.toString(), selfClassName, selfObjectName, eventName);
 			} else {
-				ebridge.systemEventSelfExcluded(this.getClass().getSimpleName(), selfClassName, selfObjectName, targetClassName, eventName);
+				ebridge.systemEventSelfExcluded(this.toString(), selfClassName, selfObjectName, targetClassName, eventName);
 			}
 		}
 	'''
@@ -187,7 +187,7 @@ class PlaygoStatemachine extends Statemachine {
 			public void «event.name.asIdentifier»(«event.type.targetLanguageName» value) {
 				«event.symbol» = true;
 				«event.valueIdentifier» = value;
-				trace("«event.name»");
+				// trace("«event.name»");
 				// System.out.println("in " + "«className»." + «event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 		}
@@ -205,7 +205,7 @@ class PlaygoStatemachine extends Statemachine {
 			
 			public void «event.name.asIdentifier»() {
 				«event.symbol» = true;
-				trace("«event.name»");
+				// trace("«event.name»");
 				//System.out.println("in " + "«className»." +"«event.name.asIdentifier»"+ "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 			
@@ -241,7 +241,7 @@ class PlaygoStatemachine extends Statemachine {
 					listener.on«event.name.asEscapedName»Raised(value);
 				}
 				«ENDIF»
-				trace("«event.name»");
+				// trace("«event.name»");
 				//System.out.println("in " + "«className»." +"«event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 			
@@ -267,7 +267,7 @@ class PlaygoStatemachine extends Statemachine {
 						listener.on«event.name.asEscapedName»Raised();
 					}
 				«ENDIF»
-				trace("«event.name»");
+				// trace("«event.name»");
 				//System.out.println("in " + "«className»." +"«event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 		«ENDIF»
@@ -290,5 +290,49 @@ class PlaygoStatemachine extends Statemachine {
 		«ENDIF»
 	'''
 	
+	override protected runCycleFunction(ExecutionFlow flow)'''
+		public void runCycle() {
+			
+			State[] tempStateVector = stateVector.clone();
+			
+			// copy of the original def protected runCycleFunction(ExecutionFlow flow) from Statemachine.xtend:
+			clearOutEvents();
+			
+			for (nextStateIndex = 0; nextStateIndex < stateVector.length; nextStateIndex++) {
+				
+				switch (stateVector[nextStateIndex]) {
+				«FOR state : flow.states»
+					«IF state.reactSequence!=null»
+						case «state.stateName.asEscapedIdentifier»:
+							«state.reactSequence.functionName»();
+							break;
+					«ENDIF»
+				«ENDFOR»
+				default:
+					// «getNullStateName()»
+				}
+			}
+			
+			clearEvents();
+			
+			// end of copy of the original def protected runCycleFunction(ExecutionFlow flow) from Statemachine.xtend:
+			
+			// gather the information about state changes in all regions. if a tracer aspect exists, this info will be 
+			// added to the PlayGo PlayoutView
+			for (int i = 0; i < stateVector.length; i++)
+			{
+				String debugMsg = new String();
+				if (!stateVector[i].toString().equals(tempStateVector[i].toString())){
+					if (debugMsg.isEmpty()){
+						debugMsg += "moved to";
+					}
+					debugMsg = debugMsg + " " + stateVector[i].toString();
+				}
+				if (!debugMsg.isEmpty()){
+					trace(debugMsg);
+				}
+			}
+		}
+	'''
 	
 }
