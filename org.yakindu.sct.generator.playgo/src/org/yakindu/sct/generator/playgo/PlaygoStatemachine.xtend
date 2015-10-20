@@ -18,7 +18,7 @@ class PlaygoStatemachine extends Statemachine {
 		public class «flow.statemachineClassName» implements «flow.statemachineInterfaceName», IExecutionEngineSCT {
 			
 			«flow.createFieldDeclarations(entry)»
-		
+			
 			«flow.createPlayGoFieldDeclarations»
 			
 			«flow.createToString»
@@ -61,6 +61,8 @@ class PlaygoStatemachine extends Statemachine {
 			
 			«flow.systemEvent»
 			
+			«flow.objectPropertyChanged»
+				
 			«flow.trace»
 			
 		}
@@ -101,7 +103,9 @@ class PlaygoStatemachine extends Statemachine {
 		'''import il.ac.wis.cs.playgo.ee.sct.IExecutionEngineSCT;
 		import il.ac.wis.cs.playgo.playtoolkit.ebridge.IExecutionBridge;
 		import il.ac.wis.cs.playgo.ee.sct.ExecutionBridge2SCT;
-		import org.yakindu.scr.TimerService;
+		«IF flow.timed»
+			import org.yakindu.scr.TimerService;
+		«ENDIF»
 		'''
 	}
 	
@@ -137,10 +141,11 @@ class PlaygoStatemachine extends Statemachine {
 	
 	def protected initEE(ExecutionFlow flow) '''
 		public void initEE() {
-			this.setTimer(new TimerService());
+			«IF flow.timed»
+				this.setTimer(new TimerService());
+			«ENDIF»
 
-			// enter the sm and active the Idle state
-		
+			// enter the statemachine and activate the Idle state
 			this.init();
 			this.enter();
 		}
@@ -169,6 +174,14 @@ class PlaygoStatemachine extends Statemachine {
 			}
 		}
 	'''
+	
+	def protected objectPropertyChanged(ExecutionFlow flow) '''
+		public void objectPropertyChanged(String className, String objectName,
+										String propertyName, String type, String value) {
+			ebridge.objectPropertyChanged(className, objectName, propertyName, type, value);
+		}
+	'''
+	
 	def protected trace(ExecutionFlow flow) '''
 		public void trace(String eventName) {
 		}
@@ -274,21 +287,25 @@ class PlaygoStatemachine extends Statemachine {
 	'''
 	}
 	
-	override protected def generateVariableDefinition(VariableDefinition variable) '''
-		«IF !variable.const»
-			«variable.writeableFieldDeclaration»
-		«ENDIF»
-		public «variable.type.targetLanguageName» «variable.getter» {
-			return «variable.symbol»;
-		}
-		
-		«IF !variable.readonly && !variable.const»
-			public void «variable.setter»(«variable.type.targetLanguageName» value) {
-				this.«variable.symbol» = value;
-				ebridge.objectPropertyChanged(selfClassName, selfObjectName, "«variable.name»", "«variable.type.targetLanguageName»", String.valueOf(value));
-			}
-		«ENDIF»
-	'''
+//	override protected def generateVariableDefinition(VariableDefinition variable) '''
+//		«IF !variable.const»
+//			«variable.writeableFieldDeclaration»
+//		«ENDIF»
+//		public «variable.type.targetLanguageName» «variable.getter» {
+//			return «variable.symbol»;
+//		}
+//		
+//		«IF !variable.readonly && !variable.const»
+//			public void «variable.setter»(«variable.type.targetLanguageName» value) {
+//				this.«variable.symbol» = value;
+//				ebridge.objectPropertyChanged(selfClassName, selfObjectName, "«variable.name»", "«variable.type.targetLanguageName»", String.valueOf(value));
+//			}
+//		«ENDIF»
+//	'''
+
+	override protected writeableFieldDeclaration(VariableDefinition variable){
+		'''protected «variable.type.targetLanguageName» «variable.symbol»;'''
+	}
 	
 	override protected runCycleFunction(ExecutionFlow flow)'''
 		public void runCycle() {
