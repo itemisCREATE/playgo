@@ -62,6 +62,8 @@ class PlaygoStatemachine extends Statemachine {
 			«flow.systemEvent»
 			
 			«flow.objectPropertyChanged»
+			
+			«flow.getPropertyValue»
 				
 			«flow.trace»
 			
@@ -182,6 +184,14 @@ class PlaygoStatemachine extends Statemachine {
 		}
 	'''
 	
+	def protected getPropertyValue(ExecutionFlow flow)'''
+		public Object getPropertyValue(String objectName, String className,
+				String propertyName, String type) {
+			return ebridge.getPropertyValue(objectName, className, propertyName, type);
+			
+		}
+	'''
+	
 	def protected trace(ExecutionFlow flow) '''
 		public void trace(String eventName) {
 		}
@@ -287,21 +297,21 @@ class PlaygoStatemachine extends Statemachine {
 	'''
 	}
 	
-//	override protected def generateVariableDefinition(VariableDefinition variable) '''
-//		«IF !variable.const»
-//			«variable.writeableFieldDeclaration»
-//		«ENDIF»
-//		public «variable.type.targetLanguageName» «variable.getter» {
-//			return «variable.symbol»;
-//		}
-//		
-//		«IF !variable.readonly && !variable.const»
-//			public void «variable.setter»(«variable.type.targetLanguageName» value) {
-//				this.«variable.symbol» = value;
-//				ebridge.objectPropertyChanged(selfClassName, selfObjectName, "«variable.name»", "«variable.type.targetLanguageName»", String.valueOf(value));
-//			}
-//		«ENDIF»
-//	'''
+	override protected def generateVariableDefinition(VariableDefinition variable) '''
+		«IF !variable.const»
+			«variable.writeableFieldDeclaration»
+		«ENDIF»
+		public «variable.type.targetLanguageName» «variable.getter» {
+			return «variable.symbol»;
+		}
+		
+		«IF !variable.readonly && !variable.const»
+			public void «variable.setter»(«variable.type.targetLanguageName» value) {
+				this.«variable.symbol» = value;
+				trace("«variable.name»" + " = " + String.valueOf(value));
+			}
+		«ENDIF»
+	'''
 
 	override protected writeableFieldDeclaration(VariableDefinition variable){
 		'''protected «variable.type.targetLanguageName» «variable.symbol»;'''
@@ -351,5 +361,47 @@ class PlaygoStatemachine extends Statemachine {
 			}
 		}
 	'''
+	
+	
+		override def protected initFunction(ExecutionFlow flow) '''
+		public void init() {
+			«IF flow.timed»
+			if (timer == null) {
+				throw new IllegalStateException("timer not set.");
+			}
+			«ENDIF»
+			for (int i = 0; i < «flow.stateVector.size»; i++) {
+				stateVector[i] = State.$NullState$;
+			}
+			
+			«IF flow.hasHistory»
+			for (int i = 0; i < «flow.historyVector.size»; i++) {
+				historyVector[i] = State.$NullState$;
+			}
+			«ENDIF»
+			clearEvents();
+			clearOutEvents();
+			
+			«flow.initSequence.code»
+			
+			«FOR scope: flow.interfaceScopes»
+				«FOR variable : scope.variableDefinitions »
+					«writeableFieldInit(scope.interfaceName.asEscapedIdentifier, variable)»
+				«ENDFOR»
+			«ENDFOR»
+«««			«FOR variable : flow.internalScopeVariables»
+«««					«internalFieldInit(variable)»
+«««			«ENDFOR»
+			
+		}
+	'''
+	
+//	def internalFieldInit(VariableDefinition variable) {
+//		'''«variable.type.targetLanguageName» «variable.symbol» = «variable.initialValue»;'''
+//	}
+	
+	def writeableFieldInit(String interfaceName, VariableDefinition variable) {
+		'''«interfaceName».«variable.symbol» = («variable.type.targetLanguageName»)getPropertyValue(selfObjectName, selfClassName, "«variable.symbol»", "«variable.type.targetLanguageName»");'''
+	}
 	
 }
