@@ -308,7 +308,7 @@ class PlaygoStatemachine extends Statemachine {
 		«IF !variable.readonly && !variable.const»
 			public void «variable.setter»(«variable.type.targetLanguageName» value) {
 				this.«variable.symbol» = value;
-				trace("«variable.name»" + " = " + String.valueOf(value));
+				trace("«variable.scope.interfaceName.substring(3/* removing the SCI prefix to leave the interface name as the user defines it*/)».«variable.name»" + " = " + String.valueOf(value));
 			}
 		«ENDIF»
 	'''
