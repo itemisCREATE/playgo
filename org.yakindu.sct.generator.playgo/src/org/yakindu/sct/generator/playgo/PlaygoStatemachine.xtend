@@ -69,16 +69,6 @@ class PlaygoStatemachine extends Statemachine {
 			
 		}
 	'''
-
-//	override protected createConstructor(ExecutionFlow flow)'''
-//		public «flow.statemachineClassName»() {
-//			
-//			«FOR scope : flow.interfaceScopes»
-//			«scope.interfaceName.asEscapedIdentifier» = new «scope.getInterfaceImplName()»();
-//			«ENDFOR»
-//			register(SystemModelMain.getInstance()); // consider moving this piece of code to the init function
-//		}
-//	'''
 	
 	override protected createConstructor(ExecutionFlow flow){
 		return super.createConstructor(flow) + 
@@ -169,7 +159,7 @@ class PlaygoStatemachine extends Statemachine {
 	
 	def protected systemEvent(ExecutionFlow flow) '''
 		public void systemEvent(String targetClassName, String targetObjectName, String eventName) {
-			if(targetClassName.equalsIgnoreCase("self")){
+			if(targetClassName.equals(selfClassName) && targetObjectName.equals(selfObjectName)){
 				ebridge.systemEvent(this.toString(), selfClassName, selfObjectName, eventName);
 			} else {
 				ebridge.systemEventSelfExcluded(this.toString(), selfClassName, selfObjectName, targetClassName, eventName);
@@ -180,7 +170,9 @@ class PlaygoStatemachine extends Statemachine {
 	def protected objectPropertyChanged(ExecutionFlow flow) '''
 		public void objectPropertyChanged(String className, String objectName,
 										String propertyName, String type, String value) {
+			ebridge.setOriginatedFromExecutionEngine(this.toString());
 			ebridge.objectPropertyChanged(className, objectName, propertyName, type, value);
+			ebridge.setOriginatedFromExecutionEngine(null);
 		}
 	'''
 	
@@ -198,22 +190,25 @@ class PlaygoStatemachine extends Statemachine {
 	'''
 	
 	override protected def generateInEventDefinition(EventDefinition event){
-		val className = event.scope.interfaceName.substring(3);
+		
+		val className = event.scope.interfaceName.substring(3);	
+
 		'''
 		«IF event.type != null && !isSame(event.type, getType(GenericTypeSystem.VOID))»
 			public void raise«event.name.asName»(«event.type.targetLanguageName» value) {
 				«event.symbol» = true;
 				«event.valueIdentifier» = value;
-				systemEvent("«className»", selfObjectName, "«event.name»");
+				«IF event.scope.defaultInterface»
+					systemEvent(selfClassName, selfObjectName, "«event.name»");
+				«ELSE»
+					systemEvent("«className»", null, "«event.name»");
+				«ENDIF»
 			}
 			
 			public void «event.name.asIdentifier»(«event.type.targetLanguageName» value) {
 				«event.symbol» = true;
 				«event.valueIdentifier» = value;
-				// trace("«event.name»");
-				// System.out.println("in " + "«className»." + «event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
-		}
 			
 			private «event.type.targetLanguageName» get«event.name.asName»Value() {
 				«event.getIllegalAccessValidation()»
@@ -223,13 +218,16 @@ class PlaygoStatemachine extends Statemachine {
 		«ELSE»
 			public void raise«event.name.asName»() {
 				«event.symbol» = true;
-				systemEvent("«className»", selfObjectName, "«event.name»");
+				«IF event.scope.defaultInterface»
+					systemEvent(selfClassName, selfObjectName, "«event.name»");
+				«ELSE»
+					systemEvent("«className»", null, "«event.name»");
+				«ENDIF»
+					
 			}
 			
 			public void «event.name.asIdentifier»() {
 				«event.symbol» = true;
-				// trace("«event.name»");
-				//System.out.println("in " + "«className»." +"«event.name.asIdentifier»"+ "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 			
 		«ENDIF»
@@ -252,7 +250,7 @@ class PlaygoStatemachine extends Statemachine {
 				for («scope.interfaceListenerName» listener : listeners) {
 					listener.on«event.name.asEscapedName»Raised(value);
 				}
-				systemEvent("«className»", selfObjectName, "«event.name»");
+				systemEvent("«className»", null, "«event.name»");
 				«ENDIF»
 			}
 			
@@ -264,8 +262,6 @@ class PlaygoStatemachine extends Statemachine {
 					listener.on«event.name.asEscapedName»Raised(value);
 				}
 				«ENDIF»
-				// trace("«event.name»");
-				//System.out.println("in " + "«className»." +"«event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 			
 			public «event.type.targetLanguageName» get«event.name.asName»Value() {
@@ -280,7 +276,7 @@ class PlaygoStatemachine extends Statemachine {
 						listener.on«event.name.asEscapedName»Raised();
 					}
 				«ENDIF»
-				systemEvent("«className»", selfObjectName, "«event.name»");
+				systemEvent("«className»", null, "«event.name»");
 			}
 			
 			private void «event.name.asIdentifier»() {
@@ -290,8 +286,6 @@ class PlaygoStatemachine extends Statemachine {
 						listener.on«event.name.asEscapedName»Raised();
 					}
 				«ENDIF»
-				// trace("«event.name»");
-				//System.out.println("in " + "«className»." +"«event.name.asIdentifier»" + "[" + selfObjectName+ ":" + selfClassName + "]");
 			}
 		«ENDIF»
 	'''
@@ -308,7 +302,11 @@ class PlaygoStatemachine extends Statemachine {
 		«IF !variable.readonly && !variable.const»
 			public void «variable.setter»(«variable.type.targetLanguageName» value) {
 				this.«variable.symbol» = value;
-				trace("«variable.scope.interfaceName.substring(3/* removing the SCI prefix to leave the interface name as the user defines it*/)».«variable.name»" + " = " + String.valueOf(value));
+				«IF variable.scope.defaultInterface»
+					trace("«variable.name»" + " = " + String.valueOf(value));
+				«ELSE»
+					trace("«variable.scope.interfaceName.substring(3/* removing the SCI prefix to leave the interface name as the user defines it*/)».«variable.name»" + " = " + String.valueOf(value));
+				«ENDIF»
 			}
 		«ENDIF»
 	'''
