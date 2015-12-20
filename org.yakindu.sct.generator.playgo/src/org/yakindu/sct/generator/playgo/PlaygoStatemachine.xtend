@@ -247,10 +247,14 @@ class PlaygoStatemachine extends Statemachine {
 				«event.symbol» = true;
 				«event.valueIdentifier» = value;
 				«IF entry.createInterfaceObserver»
-				for («scope.interfaceListenerName» listener : listeners) {
-					listener.on«event.name.asEscapedName»Raised(value);
-				}
-				systemEvent("«className»", null, "«event.name»");
+					for («scope.interfaceListenerName» listener : listeners) {
+						listener.on«event.name.asEscapedName»Raised(value);
+					}
+					«IF event.scope.defaultInterface»
+						systemEvent(selfClassName, selfObjectName, "«event.name»");
+					«ELSE»
+						systemEvent("«className»", null, "«event.name»");
+					«ENDIF»
 				«ENDIF»
 			}
 			
@@ -276,7 +280,11 @@ class PlaygoStatemachine extends Statemachine {
 						listener.on«event.name.asEscapedName»Raised();
 					}
 				«ENDIF»
-				systemEvent("«className»", null, "«event.name»");
+				«IF event.scope.defaultInterface»
+					systemEvent(selfClassName, selfObjectName, "«event.name»");
+				«ELSE»
+					systemEvent("«className»", null, "«event.name»");
+				«ENDIF»
 			}
 			
 			private void «event.name.asIdentifier»() {
