@@ -31,6 +31,8 @@ class PlaygoStatemachine extends Statemachine {
 			
 			«flow.exitFunction»
 			
+			«flow.generateStateVectorGetter»
+			
 			«flow.clearInEventsFunction»
 			
 			«flow.clearOutEventsFunction»
@@ -48,6 +50,10 @@ class PlaygoStatemachine extends Statemachine {
 			«flow.functionImplementations»
 			
 			«flow.runCycleFunction»
+			
+			«flow.initSuperCycle»
+			
+			«flow.endSuperCycle»
 			
 			«flow.isFinal»
 			
@@ -88,11 +94,19 @@ class PlaygoStatemachine extends Statemachine {
 		public String toString(){
 			return this.getClass().getSimpleName() + "[" + this.selfObjectName+":" +this.selfClassName + "]";
 		}
+		
+		public String getStatemachineName(){
+			return "«flow.statemachineName.asIdentifier»";
+		}
+		
 	'''
 	
 	override protected createImports(ExecutionFlow flow, GeneratorEntry entry) {
 		return super.createImports(flow, entry) + 
-		'''import il.ac.wis.cs.playgo.ee.sct.IExecutionEngineSCT;
+		'''
+		import java.util.ArrayList;
+		
+		import il.ac.wis.cs.playgo.ee.sct.IExecutionEngineSCT;
 		import il.ac.wis.cs.playgo.playtoolkit.ebridge.IExecutionBridge;
 		import il.ac.wis.cs.playgo.ee.sct.ExecutionBridge2SCT;
 		«IF flow.timed»
@@ -102,10 +116,14 @@ class PlaygoStatemachine extends Statemachine {
 	}
 	
 	def protected createPlayGoFieldDeclarations(ExecutionFlow flow)'''
+		private final ArrayList<String> waitingRegions = new ArrayList<String>();
+		
 		private ExecutionBridge2SCT ebridge = null;
 		
 		private String selfObjectName = null;
 		private String selfClassName = null;
+		
+		private String activeRegion = "«flow.statemachineName.asIdentifier»";
 		
 		public String getSelfObjectName(){
 			return selfObjectName;
@@ -113,6 +131,10 @@ class PlaygoStatemachine extends Statemachine {
 		
 		public String getSelfClassName(){
 			return selfClassName;
+		}
+		
+		public String getActiveRegion(){
+			return activeRegion;
 		}
 	'''
 	
@@ -143,6 +165,11 @@ class PlaygoStatemachine extends Statemachine {
 		}
 	'''
 	
+	def public generateStateVectorGetter(ExecutionFlow flow)'''
+		public State[] getStateVector() {
+			return stateVector;
+		}
+	'''
 	def protected activateMethod(ExecutionFlow flow) '''
 		public void activateMethod(String className, String objectName,
 			String methodName, String... arguments) {
@@ -159,7 +186,7 @@ class PlaygoStatemachine extends Statemachine {
 	
 	def protected systemEvent(ExecutionFlow flow) '''
 		public void systemEvent(String targetClassName, String targetObjectName, String eventName) {
-			if(targetClassName.equals(selfClassName) && targetObjectName.equals(selfObjectName)){
+			if(targetClassName.equals(selfClassName) && targetObjectName != null && targetObjectName.equals(selfObjectName)){
 				ebridge.systemEvent(this.toString(), selfClassName, selfObjectName, eventName);
 			} else {
 				ebridge.systemEventSelfExcluded(this.toString(), selfClassName, selfObjectName, targetClassName, eventName);
@@ -203,6 +230,7 @@ class PlaygoStatemachine extends Statemachine {
 				«ELSE»
 					systemEvent("«className»", null, "«event.name»");
 				«ENDIF»
+				waitingRegions.remove(activeRegion);
 			}
 			
 			public void «event.name.asIdentifier»(«event.type.targetLanguageName» value) {
@@ -223,6 +251,7 @@ class PlaygoStatemachine extends Statemachine {
 				«ELSE»
 					systemEvent("«className»", null, "«event.name»");
 				«ENDIF»
+				waitingRegions.remove(activeRegion);
 					
 			}
 			
@@ -255,6 +284,7 @@ class PlaygoStatemachine extends Statemachine {
 					«ELSE»
 						systemEvent("«className»", null, "«event.name»");
 					«ENDIF»
+					waitingRegions.remove(activeRegion);
 				«ENDIF»
 			}
 			
@@ -285,6 +315,7 @@ class PlaygoStatemachine extends Statemachine {
 				«ELSE»
 					systemEvent("«className»", null, "«event.name»");
 				«ENDIF»
+				waitingRegions.remove(activeRegion);
 			}
 			
 			private void «event.name.asIdentifier»() {
@@ -327,6 +358,7 @@ class PlaygoStatemachine extends Statemachine {
 		public void runCycle() {
 			
 			State[] tempStateVector = stateVector.clone();
+			activeRegion = "«flow.statemachineName.asIdentifier»";
 			
 			// copy of the original def protected runCycleFunction(ExecutionFlow flow) from Statemachine.xtend:
 			clearOutEvents();
@@ -337,7 +369,11 @@ class PlaygoStatemachine extends Statemachine {
 				«FOR state : flow.states»
 					«IF state.reactSequence!=null»
 						case «state.stateName.asEscapedIdentifier»:
-							«state.reactSequence.functionName»();
+							// trigger transitions (i.e., call the corresponding react method) only for regions that are waiting regions
+							if (waitingRegions.contains("«state.superScope.name»")) {
+								activeRegion = "«state.superScope.name»";
+								«state.reactSequence.functionName»();
+							}
 							break;
 					«ENDIF»
 				«ENDFOR»
@@ -348,23 +384,23 @@ class PlaygoStatemachine extends Statemachine {
 			
 			clearEvents();
 			
-			// end of copy of the original def protected runCycleFunction(ExecutionFlow flow) from Statemachine.xtend:
-			
-			// gather the information about state changes in all regions. if a tracer aspect exists, this info will be 
-			// added to the PlayGo PlayoutView
-			for (int i = 0; i < stateVector.length; i++)
-			{
+			// Gather the information about state changes in all regions.
+			// Call runCycle recursively until the statemachine has no internal actions to perform.
+			// If a tracer aspect exists, this info will be added to the PlayGo PlayoutView
+			for (int i = 0; i < stateVector.length; i++) {
 				String debugMsg = new String();
-				if (!stateVector[i].toString().equals(tempStateVector[i].toString())){
-					if (debugMsg.isEmpty()){
+				if (!stateVector[i].toString().equals(tempStateVector[i].toString())) {
+					if (debugMsg.isEmpty()) {
 						debugMsg += "moved to";
 					}
 					debugMsg = debugMsg + " " + stateVector[i].toString();
 				}
-				if (!debugMsg.isEmpty()){
+				if (!debugMsg.isEmpty()) { // stateVector had changed
 					trace(debugMsg);
+					runCycle(); // runCycle (i.e., advance the statemachine) as long as it has internal actions to perform
 				}
 			}
+			
 		}
 	'''
 	
@@ -409,5 +445,26 @@ class PlaygoStatemachine extends Statemachine {
 	def writeableFieldInit(String interfaceName, VariableDefinition variable) {
 		'''«interfaceName».«variable.symbol» = («variable.type.targetLanguageName»)getPropertyValue(selfObjectName, selfClassName, "«variable.symbol»", "«variable.type.targetLanguageName»");'''
 	}
+	
+	def initSuperCycle(ExecutionFlow flow){
+		'''
+		public void initSuperCycle(){
+			// clearEvents(); // this removes also external/user events... must not clear all events...
+			waitingRegions.clear();
+			«FOR region: flow.regions»
+					waitingRegions.add("«region.name»");
+			«ENDFOR»
+		}
+		'''
+	}
+	
+		def endSuperCycle(ExecutionFlow flow){
+		'''
+		public void endSuperCycle(){
+			clearEvents(); 
+		}
+		'''
+	}
+	
 	
 }
