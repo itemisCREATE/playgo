@@ -85,6 +85,11 @@ class PlaygoStatemachine extends Statemachine {
 			
 			this.selfObjectName = selfObjName;
 			this.selfClassName = selfClassName;
+			
+			«FOR state : flow.states»
+			statesAbsoluteName.put("«state.stateName.asEscapedIdentifier»","«state.name»");
+			«ENDFOR»
+			statesAbsoluteName.put("«getNullStateName()»", "«getNullStateName()»");
 		}
 		
 	'''
@@ -95,8 +100,9 @@ class PlaygoStatemachine extends Statemachine {
 			return this.getClass().getSimpleName() + "[" + this.selfObjectName+":" +this.selfClassName + "]";
 		}
 		
+		// returns the case sensitive name of the statemachine
 		public String getStatemachineName(){
-			return "«flow.statemachineName.asIdentifier»";
+			return "«flow.name»"; 
 		}
 		
 	'''
@@ -105,6 +111,7 @@ class PlaygoStatemachine extends Statemachine {
 		return super.createImports(flow, entry) + 
 		'''
 		import java.util.ArrayList;
+		import java.util.HashMap;
 		
 		import il.ac.wis.cs.playgo.ee.sct.IExecutionEngineSCT;
 		import il.ac.wis.cs.playgo.playtoolkit.ebridge.IExecutionBridge;
@@ -136,6 +143,9 @@ class PlaygoStatemachine extends Statemachine {
 		public String getActiveRegion(){
 			return activeRegion;
 		}
+		
+		public HashMap<String, String> statesAbsoluteName  = new HashMap<String, String>();
+		
 	'''
 	
 
@@ -393,7 +403,7 @@ class PlaygoStatemachine extends Statemachine {
 					if (debugMsg.isEmpty()) {
 						debugMsg += "moved to";
 					}
-					debugMsg = debugMsg + " " + stateVector[i].toString();
+					debugMsg = debugMsg + " " + statesAbsoluteName.get(stateVector[i].toString());
 				}
 				if (!debugMsg.isEmpty()) { // stateVector had changed
 					trace(debugMsg);
