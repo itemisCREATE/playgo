@@ -7,6 +7,7 @@ import org.yakindu.sct.model.sgen.GeneratorEntry
 import org.yakindu.sct.model.stext.stext.EventDefinition
 import org.yakindu.sct.model.stext.stext.VariableDefinition
 import org.yakindu.sct.model.stext.stext.InterfaceScope
+import org.yakindu.base.types.Direction
 
 class PlaygoStatemachine extends Statemachine {
 
@@ -32,6 +33,8 @@ class PlaygoStatemachine extends Statemachine {
 			«flow.exitFunction»
 			
 			«flow.generateStateVectorGetter»
+			
+			«flow.generateWaitingRegionsGetter»
 			
 			«flow.clearInEventsFunction»
 			
@@ -176,10 +179,23 @@ class PlaygoStatemachine extends Statemachine {
 	'''
 	
 	def public generateStateVectorGetter(ExecutionFlow flow)'''
-		public State[] getStateVector() {
-			return stateVector;
+		public ArrayList<String> getStateVector(){
+			ArrayList<String> stateList = new ArrayList<String>();
+		
+			for (State state : stateVector) {
+				stateList.add(statesAbsoluteName.get(state.toString()));
+			}
+			return stateList;
 		}
+		
 	'''
+	
+	def public generateWaitingRegionsGetter(ExecutionFlow flow)'''
+	public ArrayList<String> getWaitingRegions() {
+		return waitingRegions;
+	}
+	'''
+	
 	def protected activateMethod(ExecutionFlow flow) '''
 		public void activateMethod(String className, String objectName,
 			String methodName, String... arguments) {
@@ -367,13 +383,15 @@ class PlaygoStatemachine extends Statemachine {
 	override protected runCycleFunction(ExecutionFlow flow)'''
 		public void runCycle() {
 			
-			State[] tempStateVector = stateVector.clone();
+			boolean stateVectorChanged = false;
 			activeRegion = "«flow.statemachineName.asIdentifier»";
 			
 			// copy of the original def protected runCycleFunction(ExecutionFlow flow) from Statemachine.xtend:
 			clearOutEvents();
 			
 			for (nextStateIndex = 0; nextStateIndex < stateVector.length; nextStateIndex++) {
+	
+				State[] tempStateVector = stateVector.clone();
 				
 				switch (stateVector[nextStateIndex]) {
 				«FOR state : flow.states»
@@ -390,25 +408,26 @@ class PlaygoStatemachine extends Statemachine {
 				default:
 					// «getNullStateName()»
 				}
+		
+				// if the stateVector changed and if a Tracer aspect exists, this info will be added to the PlayGo PlayoutView:
+				for (int i = 0; i < stateVector.length; i++) { // need to iterate over all regions, as one reaction may effect many regions (e.g., in case of entrance to orthogonal state)
+					String debugMsg = new String();
+					if (! stateVector[i].toString().equals(tempStateVector[i].toString())) {
+						stateVectorChanged = true;
+						debugMsg = "Moved to "
+								+ statesAbsoluteName.get(stateVector[i].toString());
+					}
+					if (!debugMsg.isEmpty()) {
+						trace(debugMsg);
+					}
+				}
 			}
 			
 			clearEvents();
 			
-			// Gather the information about state changes in all regions.
 			// Call runCycle recursively until the statemachine has no internal actions to perform.
-			// If a tracer aspect exists, this info will be added to the PlayGo PlayoutView
-			for (int i = 0; i < stateVector.length; i++) {
-				String debugMsg = new String();
-				if (!stateVector[i].toString().equals(tempStateVector[i].toString())) {
-					if (debugMsg.isEmpty()) {
-						debugMsg += "moved to";
-					}
-					debugMsg = debugMsg + " " + statesAbsoluteName.get(stateVector[i].toString());
-				}
-				if (!debugMsg.isEmpty()) { // stateVector had changed
-					trace(debugMsg);
-					runCycle(); // runCycle (i.e., advance the statemachine) as long as it has internal actions to perform
-				}
+			if (stateVectorChanged){
+				runCycle(); // runCycle (i.e., advance the statemachine) as long as it has internal actions to perform
 			}
 			
 		}
@@ -476,5 +495,20 @@ class PlaygoStatemachine extends Statemachine {
 		'''
 	}
 	
+	override protected generateEventDefinition(EventDefinition event, GeneratorEntry entry, InterfaceScope scope) '''
+		public boolean «event.symbol»;
+		
+		«IF event.type != null && !isSame(event.type, getType(GenericTypeSystem.VOID))»
+			private «event.type.targetLanguageName» «event.valueIdentifier»;
+		«ENDIF»
+		
+		«IF event.direction == Direction::IN»
+			«event.generateInEventDefinition»
+		«ENDIF»
+		
+		«IF event.direction == Direction::OUT»
+			«event.generateOutEventDefinition(entry, scope)»
+		«ENDIF»
+	'''
 	
 }
