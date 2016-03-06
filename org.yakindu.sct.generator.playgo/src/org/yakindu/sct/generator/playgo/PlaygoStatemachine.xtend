@@ -119,11 +119,59 @@ class PlaygoStatemachine extends Statemachine {
 		import il.ac.wis.cs.playgo.ee.sct.IExecutionEngineSCT;
 		import il.ac.wis.cs.playgo.playtoolkit.ebridge.IExecutionBridge;
 		import il.ac.wis.cs.playgo.ee.sct.ExecutionBridge2SCT;
+		/*
 		«IF flow.timed»
 			import org.yakindu.scr.TimerService;
 		«ENDIF»
+		*/
 		'''
 	}
+	
+	
+		override protected createFieldDeclarations(ExecutionFlow flow, GeneratorEntry entry) '''
+		«FOR event : flow.internalScopeEvents»
+		private boolean «event.symbol»;
+		
+		«IF event.type != null && !isSame(event.type, getType(GenericTypeSystem.VOID))»
+			private «event.type.targetLanguageName» «event.valueIdentifier»;
+		«ENDIF»
+		«ENDFOR»
+		private final boolean[] timeEvents = new boolean[«flow.timeEvents.size»];
+	
+		«FOR scope : flow.interfaceScopes»
+			«scope.toImplementation(entry)»
+			
+			private «scope.interfaceImplName» «scope.interfaceName.asEscapedIdentifier»;
+		«ENDFOR»
+	
+		public enum State {
+			«FOR state : flow.states»
+				«state.stateName.asEscapedIdentifier»,
+			«ENDFOR»
+			«getNullStateName()»
+		};
+		
+		«FOR variable : flow.internalScopeVariables»
+			«IF !variable.const»
+				«variable.writeableFieldDeclaration»
+			«ENDIF»
+		«ENDFOR»
+		
+		«IF flow.hasHistory»
+		private State[] historyVector = new State[«flow.historyVector.size»];
+		«ENDIF»
+		private final State[] stateVector = new State[«flow.stateVector.size»];
+		
+		private int nextStateIndex;
+		
+		private ExecutionBridge2SCT timer;
+		
+		«FOR internal : flow.internalScopes»
+		«IF internal.hasOperations()»
+			private «internal.getInternalOperationCallbackName()» operationCallback;
+		«ENDIF»
+		«ENDFOR»
+	'''
 	
 	def protected createPlayGoFieldDeclarations(ExecutionFlow flow)'''
 		private final ArrayList<String> waitingRegions = new ArrayList<String>();
@@ -168,9 +216,10 @@ class PlaygoStatemachine extends Statemachine {
 	
 	def protected initEE(ExecutionFlow flow) '''
 		public void initEE() {
-			«IF flow.timed»
+			/*«IF flow.timed»
 				this.setTimer(new TimerService());
-			«ENDIF»
+			«ENDIF»*/
+			this.setTimer(this.ebridge);
 
 			// enter the statemachine and activate the Idle state
 			this.init();
@@ -224,7 +273,7 @@ class PlaygoStatemachine extends Statemachine {
 		public void objectPropertyChanged(String className, String objectName,
 										String propertyName, String type, String value) {
 			ebridge.setOriginatedFromExecutionEngine(this.toString());
-			ebridge.objectPropertyChanged(className, objectName, propertyName, type, value);
+			ebridge.objectPropertyChanged(this.toString(), className, objectName, propertyName, type, value);
 			ebridge.setOriginatedFromExecutionEngine(null);
 		}
 	'''
@@ -509,6 +558,28 @@ class PlaygoStatemachine extends Statemachine {
 		«IF event.direction == Direction::OUT»
 			«event.generateOutEventDefinition(entry, scope)»
 		«ENDIF»
+	'''
+
+	override protected timingFunctions(ExecutionFlow flow) '''
+		/**
+		* Set the timer for the state machine to be implemented by the ExecutionBridge. It must be set
+		* externally on a timed state machine before a run cycle can be correctly
+		* executed.
+		* 
+		* @param timer
+		*/
+		public void setTimer(ExecutionBridge2SCT timer) {
+			this.timer = timer;
+		}
+		
+		
+		public ExecutionBridge2SCT getTimer() {
+			return timer;
+		}
+		
+		public void timeElapsed(int eventID) {
+			timeEvents[eventID] = true;
+		}
 	'''
 	
 }
