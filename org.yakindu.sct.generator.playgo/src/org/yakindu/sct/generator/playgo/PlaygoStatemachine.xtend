@@ -42,6 +42,8 @@ class PlaygoStatemachine extends Statemachine {
 			
 			«flow.activeFunction»
 			
+			«flow.stateActiveFunction»
+			
 			«flow.timingFunctions»
 			
 			«flow.interfaceAccessors»
